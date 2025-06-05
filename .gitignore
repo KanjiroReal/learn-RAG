@@ -4,5 +4,5 @@ notebooks/
 __pycache__/
 *.docx
 *.txt
-
+*.pdf
 .env*

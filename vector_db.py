@@ -3,16 +3,16 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 import uuid
 
 class QdrantManager:
-    def __init__(self, host='localhost', port=6333) -> None:
+    def __init__(self, collection_name ,host='localhost', port=6333) -> None:
         self.client = QdrantClient(host=host, port=port)
-        self.collection_name = "KL_TL"
-    
-    def create_collection(self, collection_name=None ,vector_size=768):
+        self.collection_name = collection_name
+        
+    def create_collection(self, collection_name=None ,vector_size=1024):
         print("Đang thiết lập db...")
         try:
-            collection_name = self.collection_name if collection_name is None else collection_name
+            target_collection = collection_name if collection_name is not None else self.collection_name
             self.client.create_collection(
-                collection_name=collection_name,
+                collection_name= target_collection,
                 vectors_config=VectorParams(
                     size=vector_size,
                     distance=Distance.COSINE
@@ -23,9 +23,10 @@ class QdrantManager:
             print(f"Lỗi khi tạo collection: {e}")
         
     
-    def add_documents(self, texts, embeddings):
-        points = []
+    def add_documents(self, texts, embeddings, collection_name = None):
+        target_collection = collection_name if collection_name is not None else self.collection_name
         
+        points = []
         for i, (text, embeddings) in enumerate(zip(texts, embeddings)):
             point = PointStruct(
                 id=str(uuid.uuid4()),
@@ -35,15 +36,16 @@ class QdrantManager:
             points.append(point)
             
         self.client.upsert(
-            collection_name=self.collection_name,
+            collection_name=target_collection,
             points=points
         )
         
-        print(f'Đã thêm {len(points)} documents vào Qdrant.')
+        print(f'Đã thêm {len(points)} points vào collection {target_collection}.')
     
-    def search_similar(self, query_embedding, limit=5):
+    def search_similar(self, query_embedding, limit=5, collection_name = None):
+        target_collection = collection_name if collection_name is not None else self.collection_name
         results = self.client.search(
-            collection_name=self.collection_name,
+            collection_name=target_collection,
             query_vector=query_embedding.tolist(),
             limit=limit
         )

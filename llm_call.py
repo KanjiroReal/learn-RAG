@@ -1,17 +1,13 @@
-import google.generativeai as genai
-
 from vector_db import QdrantManager
 
-from embedding_model import get_embedding_model
+from models import get_embedding_model, get_gemini_model
 
 
-class GeminiRAG:
-    def __init__(self, api_key) -> None:
-        
-        genai.configure(api_key=api_key) # type: ignore
-        self.model = genai.GenerativeModel('gemini-2.0-flash') # type: ignore
+class RAGSystem:
+    def __init__(self) -> None:
+        self.llm_model = get_gemini_model()
         self.embedding_model = get_embedding_model()
-        self.qdrant = QdrantManager()
+        self.qdrant = QdrantManager("KL_TL")
         
     def generate_response(self, query, context_docs):
         context = "\n\n".join(
@@ -34,7 +30,7 @@ class GeminiRAG:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.llm_model.generate_content(prompt)
             return response.text
         except Exception as e:
             print(e)
