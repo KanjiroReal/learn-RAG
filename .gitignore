@@ -1,0 +1,8 @@
+.venv/
+
+notebooks/
+__pycache__/
+*.docx
+*.txt
+
+.env*
