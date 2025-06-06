@@ -1,12 +1,11 @@
 import os
 
 import google.generativeai as genai
-
 from sentence_transformers import SentenceTransformer
-
 from dotenv import load_dotenv
 
 load_dotenv()
+
 api_key = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=api_key) # type: ignore
 
@@ -22,4 +21,5 @@ def get_embedding_model():
 def get_gemini_model():
     global _gemini_model
     if _gemini_model is None:
-        _gemini_model = 
+        _gemini_model = genai.GenerativeModel('gemini-2.0-flash') # type: ignore
+    return _gemini_model

@@ -7,7 +7,7 @@ class QdrantManager:
         self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
         
-    def create_collection(self, collection_name=None ,vector_size=1024):
+    def create_collection(self, collection_name=None ,vector_size=768):
         print("Đang thiết lập db...")
         try:
             target_collection = collection_name if collection_name is not None else self.collection_name

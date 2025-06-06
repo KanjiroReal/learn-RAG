@@ -5,7 +5,6 @@ from llm_call import RAGSystem
 
 def main():    
 
-    
     rag_system = RAGSystem()
 
     doc_processor = DocumentProsessor()
@@ -18,7 +17,7 @@ def main():
         # doc
         docx_file = "KLQLDD032024.docx"
         paragraph = doc_processor.extract_text_from_docx(docx_file)
-        chunks = doc_processor.fix_size_chunk(paragraph)
+        chunks = doc_processor.semantic_chunk(paragraph)
         
         # embeddings
         embeddings = doc_processor.create_embedding(chunks)

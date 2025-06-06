@@ -15,18 +15,20 @@ class RAGSystem:
         )
         
         prompt = f"""
-        Bạn là một chatbot đang hỗ trợ sinh viên hiểu được cách làm khoá luận và tiểu luận tốt nghiệp.
-
-
-        {"Thông tin tham khảo từ cơ sở tri thức:" if context else ""}
+        You are a helpful academic assistant specialized in supporting university students with graduation theses and final essays. Use the provided reference information to answer the student's question clearly and accurately.
+        Context (reference material):
         {context}
-
-        Câu hỏi của người dùng: {query}
-
-        Hướng dẫn:
-        - Ưu tiên sử dụng thông tin từ tài liệu tham khảo.
-        - Nếu người dùng không yêu cầu ngôn ngữ, hãy trả lời bằng tiếng Việt tự nhiên và dễ hiểu.
-        - Nếu không có thông tin đủ để trả lời, hãy thành thật nói rằng bạn không biết.
+        User Question:
+        {query}
+        Instructions:
+        - Prioritize using the information from the provided context when generating your response.
+        - If the user's question does not specify a language, respond in natural and easy-to-understand Vietnamese suitable for university students.
+        - Be clear, concise, and practical. Focus on guidance that is actionable and relevant to thesis or essay writing.
+        - If there is not enough information in the context to provide a reliable answer, say honestly that you do not know instead of guessing or making assumptions.
+        - Do not fabricate facts or cite sources that are not present in the context.
+        - Do not include disclaimers such as “As an AI language model...”.
+        - Stay on topic and avoid adding unrelated content.
+        Your goal is to be a trustworthy assistant that helps students understand how to write their thesis or final paper more effectively.
         """
         
         try:
@@ -36,7 +38,7 @@ class RAGSystem:
             print(e)
     
     def query(self, question, top_k=5):
-        query_embedding = self.embedding_model.encode([question])[0]
+        query_embedding = self.embedding_model.encode([question])[0] # type: ignore
         
         similar_docs = self.qdrant.search_similar(query_embedding=query_embedding, limit=top_k)
         
