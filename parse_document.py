@@ -48,7 +48,7 @@ class DocumentProsessor:
                 if converted_table:
                     full_text.append(converted_table)
         
-        print(f"Đã hoàn thành trích xuất {len(full_text)} paragraph.")
+        print(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
         return full_text
     
     # TODO

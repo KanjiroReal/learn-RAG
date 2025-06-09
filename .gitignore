@@ -1,5 +1,5 @@
 .venv/
-
+weight/
 notebooks/
 __pycache__/
 *.docx
