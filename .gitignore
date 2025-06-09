@@ -1,8 +1,10 @@
 .venv/
-
+weight/
 notebooks/
 __pycache__/
 *.docx
 *.txt
-
+*.pdf
 .env*
+
+test_*.py
