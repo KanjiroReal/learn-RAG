@@ -1,13 +1,11 @@
-import io
 import base64
-from typing import List, Dict, Any
 
+from typing import List
 from docx import Document
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
-from PIL import Image
 
 from models import get_embedding_model, get_gemini_model
 

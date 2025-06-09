@@ -14,7 +14,6 @@ class RAGSystem:
             [doc.payload['text'] for doc in context_docs]
         )
         
-        # TODO: fix prompt, problem: mô hình luôn bảo không biết sau đó đưa ra đáp án
         prompt = f"""
         You are a helpful academic assistant specialized in supporting university students with graduation theses and final essays. Use the provided reference information to answer the student's question clearly and accurately.
         Context (reference material):
