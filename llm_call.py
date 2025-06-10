@@ -19,7 +19,7 @@ class RAGSystem:
         )
         
         prompt = f"""
-        You are a helpful law assistant specialized in supporting driver with new laws. Use the provided reference information to answer the student's question clearly and accurately.
+        You are a helpful assistant specialized in supporting university with thesis and essay. Use the provided reference information to answer the student's question clearly and accurately.
         
         You also have access to a translation function. If the user asks to translate text, you should use the run_translate function.
         
@@ -31,8 +31,8 @@ class RAGSystem:
         Instructions:
         - Prioritize using the information from the provided context when generating your response.
         - If the user asks for translation, use the run_translate function with appropriate parameters.
-        - If the user's question does not specify a language, respond in natural and easy-to-understand Vietnamese suitable for driver.
-        - Be clear, concise, and practical. Focus on guidance that is actionable and relevant to law to help driver take a safe trip.
+        - If the user's question does not specify a language, respond in natural and easy-to-understand Vietnamese suitable for university student.
+        - Be clear, concise, and practical. Focus on guidance that is actionable and relevant to essay and thesis to help university student take a good grade in thesis and essay.
         - If there is not enough information in the context to provide a reliable answer, say honestly that you do not know instead of guessing or making assumptions.
         - Do not fabricate facts or cite sources that are not present in the context.
         - Do not include disclaimers such as "As an AI language model...".
@@ -40,7 +40,7 @@ class RAGSystem:
         - Use plain text only. Do not use any formatting, such as Markdown (no asterisks for bold, no underscores, no backticks, no bullet points).
         - Use standard punctuation and clear, concise language. If needed, use line breaks to separate sections, but do not use lists or formatted structures.
         
-        Your goal is to be a trustworthy assistant that helps driver understand the new laws more effectively.
+        Your goal is to be a trustworthy assistant that helps student understand how to write essay and thesis.
         """
         
         try:
@@ -92,7 +92,7 @@ class RAGSystem:
             print(f"Error in generate_response: {e}")
             return "Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn."
     
-    def query(self, question, top_k=5):
+    def query(self, question, top_k=10):
         # check if tranlate only request
         translation_keywords = ["dịch", "translate", "dịch thuật", "chuyển ngữ"]
         is_translation_request = any(keyword in question.lower() for keyword in translation_keywords)

@@ -18,7 +18,7 @@ class QdrantManager:
     
     
     def create_collection(self ,vector_size:int, collection_name=None):
-        print("Đang thiết lập db...")
+        print("[LOG] Đang thiết lập db...")
         try:
             target_collection = collection_name if collection_name is not None else self.collection_name
             self.client.create_collection(
@@ -33,9 +33,9 @@ class QdrantManager:
                     "sparse": models.SparseVectorParams(index=models.SparseIndexParams())
                 }
             )
-            print(f"Đã tạo collection {self.collection_name}.")
+            print(f"[LOG] Đã tạo collection {self.collection_name}.")
         except Exception as e:
-            print(f"Lỗi khi tạo collection: {e}")
+            print(f"[LOG] Lỗi khi tạo collection: {e}")
         
     
     def add_points_hybrid(self, texts, embeddings, collection_name = None):
@@ -61,7 +61,7 @@ class QdrantManager:
             points=points
         )
         
-        print(f'Đã thêm {len(points)} points vào collection {target_collection}.')
+        print(f'[LOG] Đã thêm {len(points)} points vào collection {target_collection}.')
     
     
     def hybrid_search_vector_fulltext(self, query_embedding, query_text,limit=5, collection_name=None):
@@ -92,17 +92,17 @@ class QdrantManager:
     
     
     def fit_sparse_vectorizer(self, texts):
-        print("Đang tạo sparse vector để truy vấn từ tài liệu...")
+        print("[LOG] Đang tạo sparse vector để truy vấn từ tài liệu...")
         self.vectorizer.fit(texts)
-        print("Đã tạo sparse vector.")
+        print("[LOG] Đã tạo sparse vector.")
         self._save_tfidf_weight()
     
     
     def _save_tfidf_weight(self):
-        print("Đang lưu sparse vector...")
+        print("[LOG] Đang lưu sparse vector...")
         os.makedirs(name=self.vectorizer_local_path.split("/")[0], exist_ok=True)
         joblib.dump(self.vectorizer, self.vectorizer_local_path)
-        print("sparse vector đã được lưu.")
+        print("[LOG] sparse vector đã được lưu.")
     
     def _load_tfidf_weight(self):
         # print("Đang load sparse vector weight...")

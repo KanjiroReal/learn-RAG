@@ -8,7 +8,7 @@ def build_db(rag_system: RAGSystem, docx_file):
     #  kiểm tra nếu collection đã tồn tại thì skip 
     collection_name = qdrant_manager.collection_name
     if not qdrant_manager.client.collection_exists(collection_name=collection_name):
-        print("Không tìm thấy collection mục tiêu trong DB, tiến hành tạo ...")
+        print("[LOG] Không tìm thấy collection mục tiêu trong DB, tiến hành tạo ...")
         doc_processor = DocumentProsessor()
         
         # doc

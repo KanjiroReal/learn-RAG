@@ -6,7 +6,6 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
-from tqdm import tqdm
 
 from models import get_embedding_model, get_gemini_model
 
@@ -19,7 +18,7 @@ class DocumentProsessor:
         """
         Xử lý văn bản đầu vào là docx, call llm summarize khi gặp table, ảnh. trả về list text là các document mỗi khi user ấn <Enter> trong document.
         """
-        print("Đang xử lý document...")
+        print("[LOG] Đang xử lý document...")
         doc = Document(file_path)
         full_text = []
         for element in doc.element.body:
@@ -47,7 +46,7 @@ class DocumentProsessor:
                 if converted_table:
                     full_text.append(converted_table)
         
-        print(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
+        print(f"[LOG] Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
         return full_text
     
     # TODO
@@ -62,12 +61,13 @@ class DocumentProsessor:
                 for blip in blips:
                     embed_id = blip.get(qn('r:embed'))
                     if embed_id:
+                        print("[LOG]     Đã tìm thấy ảnh trong paragraph")
                         try:
                             # get image data
                             image_part = doc.part.related_parts[embed_id]
                             images.append(image_part.blob)
                         except Exception as e:
-                            print(f"Lỗi khi trích xuất thông tin ảnh tại private method: _extract_images_from_paragraph: {e}")
+                            print(f"[LOG]     Lỗi khi trích xuất thông tin ảnh tại private method: _extract_images_from_paragraph: {e}")
         
         return images
     
@@ -100,11 +100,11 @@ class DocumentProsessor:
                     "data": image_base64
                 }
             ])
-            print("Đã chuyển đổi một bức ảnh thành nội dung tóm tắt.")
+            print("[LOG]     Đã chuyển đổi một bức ảnh thành nội dung tóm tắt.")
             return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] {response.text} [KẾT THÚC MÔ TẢ HÌNH ẢNH]"
             return return_text
         except Exception as e:
-            print(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
+            print(f"[LOG]     Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
             raise e.with_traceback(e.__traceback__)
         
         
@@ -121,7 +121,7 @@ class DocumentProsessor:
             table_rows.append(" | " + " | ".join(row_cells) + " | ")
         
         converted_table = "\n".join(table_rows) 
-        print("Đã chuyển đổi một bảng thành markdown format.")
+        print("[LOG]     Đã chuyển đổi một bảng thành markdown format.")
         return f"[ĐÂY LÀ BẢNG] {converted_table} [KẾT THÚC BẢNG]"
     
     
@@ -149,7 +149,7 @@ class DocumentProsessor:
 
     def semantic_chunk(self, text_list, threshold:float=0.3):
         """create chunk by semantic method with threshold"""
-        print("Đang trích xuất chunk...")
+        print("[LOG] Đang trích xuất chunk...")
         chunks = []
         current_chunk = [text_list[0]]
         embeddings = self.embedding_model.encode(text_list)
@@ -166,10 +166,10 @@ class DocumentProsessor:
         if current_chunk:
             chunks.append(" ".join(current_chunk))
 
-        print(f"Đã tạo {len(chunks)} chunks từ document.")
+        print(f"[LOG] Đã tạo {len(chunks)} chunks từ document.")
         return chunks
     
     def create_embedding(self, texts):
-        print("Đang tạo embedding...")
+        print("[LOG] Đang tạo embedding...")
         embeddings = self.embedding_model.encode(texts)
         return embeddings

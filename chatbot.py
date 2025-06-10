@@ -7,7 +7,7 @@ def print_help():
     print("\n" + "="*60)
     print("HƯỚNG DẪN SỬ DỤNG:")
     print("="*60)
-    print("1. Hỏi về luật: Nhập câu hỏi bình thường")
+    print("1. Hỏi về bài luận và khoá luận: Nhập câu hỏi bình thường")
     print("2. Dịch thuật:")
     print("   - 'Dịch sang tiếng Anh: [văn bản]'")
     print("   - 'Translate to Vietnamese: [text]'")
@@ -46,13 +46,13 @@ def parse_translation_request(question: str):
 
 
 def main():
-    collection = "LuatGiaoThong2024"
+    collection = "KL_TL"
     rag_system = build_db(
         rag_system=RAGSystem(collection_query=collection),
-        docx_file="LuatGiaoThongDuongBo2024.docx"
+        docx_file="KLQLDD032024.docx"
     )
     
-    print("\n\nTrợ lý AI hỗ trợ Thông tin luật đường bộ")
+    print("\n\nTrợ lý AI hỗ trợ tiểu luận và khoá luận")
     print("Nhập 'help' để xem hướng dẫn sử dụng")
     print("-" * 50)
     
@@ -63,7 +63,6 @@ def main():
             continue
             
         if question.lower() in ["quit", "thoat", "exit"]:
-            print("Tạm biệt! Chúc bạn thượng lộ bình an!")
             break
             
         if question.lower() in ["help", "giup", "huong dan"]:
