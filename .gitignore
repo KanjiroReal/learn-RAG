@@ -2,7 +2,7 @@
 weight/
 notebooks/
 __pycache__/
-*.docx
+# *.docx
 *.txt
 *.pdf
 .env*
