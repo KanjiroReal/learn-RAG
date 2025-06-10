@@ -6,6 +6,7 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
+from tqdm import tqdm
 
 from models import get_embedding_model, get_gemini_model
 
@@ -99,6 +100,7 @@ class DocumentProsessor:
                     "data": image_base64
                 }
             ])
+            print("Đã chuyển đổi một bức ảnh thành nội dung tóm tắt.")
             return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] {response.text} [KẾT THÚC MÔ TẢ HÌNH ẢNH]"
             return return_text
         except Exception as e:
@@ -119,7 +121,9 @@ class DocumentProsessor:
             table_rows.append(" | " + " | ".join(row_cells) + " | ")
         
         converted_table = "\n".join(table_rows) 
+        print("Đã chuyển đổi một bảng thành markdown format.")
         return f"[ĐÂY LÀ BẢNG] {converted_table} [KẾT THÚC BẢNG]"
+    
     
     def fix_size_chunk(self, text_list, chunk_size=500, overlap=50):
         chunks = []
@@ -145,6 +149,7 @@ class DocumentProsessor:
 
     def semantic_chunk(self, text_list, threshold:float=0.3):
         """create chunk by semantic method with threshold"""
+        print("Đang trích xuất chunk...")
         chunks = []
         current_chunk = [text_list[0]]
         embeddings = self.embedding_model.encode(text_list)

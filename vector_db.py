@@ -17,7 +17,7 @@ class QdrantManager:
             self.vectorizer = TfidfVectorizer()
     
     
-    def create_collection(self, collection_name=None ,vector_size=768):
+    def create_collection(self ,vector_size:int, collection_name=None):
         print("Đang thiết lập db...")
         try:
             target_collection = collection_name if collection_name is not None else self.collection_name
@@ -105,7 +105,7 @@ class QdrantManager:
         print("sparse vector đã được lưu.")
     
     def _load_tfidf_weight(self):
-        print("Đang load sparse vector weight...")
+        # print("Đang load sparse vector weight...")
         self.vectorizer = joblib.load(self.vectorizer_local_path)
-        print("Đã load sparse vector weight.")
+        # print("Đã load sparse vector weight.")
         return self.vectorizer

@@ -13,7 +13,7 @@ def build_db(rag_system: RAGSystem, docx_file):
         
         # doc
         paragraphs = doc_processor.extract_text_from_docx(docx_file)
-        chunks = doc_processor.semantic_chunk(paragraphs, threshold=0.45)
+        chunks = doc_processor.semantic_chunk(paragraphs)
         
         # sparse vector (for hybrid search)
         qdrant_manager.fit_sparse_vectorizer(chunks)

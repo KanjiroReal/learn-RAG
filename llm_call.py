@@ -57,20 +57,24 @@ class RAGSystem:
                             function_result = self.available_function[function_name](**function_args) # type: ignore
                             final_prompt = f"""
                             Based on the translation result: {function_result}
+                            Argument input to function :{function_args}
                             Original user question: {query}
+                            
+                            Please follow these instruction below
+                            
                             Instruction:
                             - Respond in Vietnamese unless the user specifically requests another language.
                             - Present the output clearly using the following format:
                             
                             ======================<VĂN BẢN CẦN DỊCH>====================== (always using caplock in this title and keep the "<" and ">" symbol. you can change this title to the language that the user request, if not, use vietnamese)
-                            (original text to translate here, not a full orignal text)
+                            (Only Text need to translate here. You Do not rewrite all the user question here.)
                             
                             ====================<VĂN BẢN SAU KHI DỊCH>==================== (always using caplock in this title and keep the "<" and ">" symbol. you can change this title to the language that the user request, if not, use vietnamese)
                             (translated text here)
                             
-                            ======================<THÔNG TIN HỮU ÍCH>====================== (always using caplock in this title and keep the "<" and ">" symbol. you can change this title to the language that the user request, if not, use vietnamese)
+                            ======================<THÔNG TIN HỮU ÍCH>===================== (always using caplock in this title and keep the "<" and ">" symbol. you can change this title to the language that the user request, if not, use vietnamese)
                             (you will provide some helpful tips here, generate in bullet symbol "-".)
-                            ===============================================================
+                            ==============================================================
                             
                             Other instructions:
                             - Provide relevant context, usage notes, or alternative translations if useful.
