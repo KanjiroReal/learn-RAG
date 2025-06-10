@@ -1,7 +1,7 @@
 from llm_call import RAGSystem
 from parse_document import DocumentProsessor
 
-def build_db(rag_system: RAGSystem):
+def build_db(rag_system: RAGSystem, docx_file):
     
     qdrant_manager = rag_system.qdrant
     
@@ -12,9 +12,8 @@ def build_db(rag_system: RAGSystem):
         doc_processor = DocumentProsessor()
         
         # doc
-        docx_file = "KLQLDD032024.docx"
         paragraphs = doc_processor.extract_text_from_docx(docx_file)
-        chunks = doc_processor.semantic_chunk(paragraphs)
+        chunks = doc_processor.semantic_chunk(paragraphs, threshold=0.45)
         
         # sparse vector (for hybrid search)
         qdrant_manager.fit_sparse_vectorizer(chunks)
