@@ -61,6 +61,7 @@ class RAGSystem:
                 ]
             }
         ]
+        # TODO:  fix call tool
         response = self.agent_manager.run_agent(agent=agent, prompt=message)
         return response
     

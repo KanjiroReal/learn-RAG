@@ -1,10 +1,9 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, Any
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from agents import FunctionTool
 
 class Tools(Enum):
     TRANSLATE = "translate"
@@ -16,7 +15,7 @@ class ToolStatus(Enum):
 class ToolConfig(BaseModel):
     name: str
     status: ToolStatus
-    function: FunctionTool | None = None
+    function: Any
     description: str | None = None
 
 class ModelType(str, Enum):
@@ -47,3 +46,5 @@ def load_models_config() -> Dict[ModelType, ModelConfig]:
             base_url=settings.vl_private_model_url
         )
     }
+
+

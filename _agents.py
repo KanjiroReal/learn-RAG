@@ -1,14 +1,14 @@
 import asyncio
-import os
 
 from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
-from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig
+from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings
 
 from _config import load_models_config, ModelType
+from _logger import logging
 
 _embedding = None
-
+logger = logging.getLogger(__name__)
 class AgentManager:
     """Manager for Agent and client of OpenAI Agent SDK"""
 
@@ -42,7 +42,14 @@ class AgentManager:
         return agent
 
     async def _run_agent(self, agent: Agent, prompt) -> str:
-        result = await Runner.run(agent, prompt, run_config=RunConfig(tracing_disabled=True))
+        result = await Runner.run(
+            agent, 
+            prompt, 
+            run_config=RunConfig(
+                tracing_disabled=True,
+                model_settings=ModelSettings(tool_choice="auto")
+            )
+        )
         return result.final_output
     
     def run_agent(self, agent: Agent, prompt) -> str:
@@ -52,9 +59,11 @@ class AgentManager:
         return self.clients[client_type]
 
 def get_embedding():
+    logger.info("Đang load embedding...")
     global _embedding
     if _embedding is None:
         _embedding = SentenceTransformer("huyydangg/DEk21_hcmute_embedding")
+    logger.info("Đã load embedding.")
     return _embedding
 
 

@@ -55,7 +55,8 @@ def main():
                 print(f"\nĐã sử dụng {len(similar_docs)} tài liệu liên quan")
                 
         except Exception as e:
-            print(f"\nLỗi: {e}")
+            raise e.with_traceback(e.__traceback__)
+            
             
 
 if __name__ == "__main__":
