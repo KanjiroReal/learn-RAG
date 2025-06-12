@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
 from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig
 
-from _config import load_model_config, ModelType
+from _config import load_models_config, ModelType
 
 _embedding = None
 
@@ -13,7 +13,7 @@ class AgentManager:
     """Manager for Agent and client of OpenAI Agent SDK"""
 
     def __init__(self) -> None:
-        self.config = load_model_config()
+        self.config = load_models_config()
         self.clients = {}
         self._init_clients()
     
@@ -27,7 +27,7 @@ class AgentManager:
                 api_key=client_config.api_key
             )
 
-    def create_agent(self, name:str, instruction:str, model_type: ModelType) -> Agent:
+    def create_agent(self, name:str, instruction:str, model_type: ModelType, tools: list = []) -> Agent:
         client = self.get_client(model_type)
         model = OpenAIChatCompletionsModel(
             model=self.config[model_type].name,
@@ -36,7 +36,8 @@ class AgentManager:
         agent = Agent(
             name=name,
             instructions=instruction,
-            model=model
+            model=model,
+            tools=tools
         )
         return agent
 

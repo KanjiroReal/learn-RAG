@@ -1,5 +1,8 @@
-from llm_call import RAGSystem
-from parse_document import DocumentProsessor
+from _rag import RAGSystem
+from _logger import logging
+from parse_document import Parser
+
+logger = logging.getLogger(__name__)
 
 def build_db(rag_system: RAGSystem, docx_file):
     
@@ -8,8 +11,8 @@ def build_db(rag_system: RAGSystem, docx_file):
     #  kiểm tra nếu collection đã tồn tại thì skip 
     collection_name = qdrant_manager.collection_name
     if not qdrant_manager.client.collection_exists(collection_name=collection_name):
-        print("[LOG] Không tìm thấy collection mục tiêu trong DB, tiến hành tạo ...")
-        doc_processor = DocumentProsessor()
+        logger.info("Không tìm thấy collection mục tiêu trong DB, tiến hành tạo ...")
+        doc_processor = Parser()
         
         # doc
         paragraphs = doc_processor.extract_text_from_docx(docx_file)

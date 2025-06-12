@@ -1,4 +1,4 @@
-from utils import build_db
+from _utils import build_db
 from llm_call import RAGSystem
 
 
@@ -16,33 +16,6 @@ def print_help():
     print("   - 'help' hoặc 'giup' : Hiển thị hướng dẫn")
     print("   - 'quit' : Thoát chương trình")
     print("="*60)
-
-
-def parse_translation_request(question: str):
-    """Parse translation request to extract source text and language info"""
-    question_lower = question.lower()
-    
-    # Common translation patterns
-    patterns = [
-        'dịch sang tiếng anh:',
-        'dịch sang tiếng việt:',
-        'translate to english:',
-        'translate to vietnamese:',
-        'dịch từ tiếng anh sang tiếng việt:',
-        'dịch từ tiếng việt sang tiếng anh:',
-        'dịch:',
-        'translate:',
-    ]
-    
-    for pattern in patterns:
-        if pattern in question_lower:
-            # Extract text after the pattern
-            parts = question.split(':', 1)
-            if len(parts) > 1:
-                text_to_translate = parts[1].strip()
-                return text_to_translate
-    
-    return None
 
 
 def main():
@@ -78,19 +51,12 @@ def main():
             print("-" * 40)
             print(response)
             
-            # Show number of related documents used (only for non-translation queries)
-            translation_keywords = ['dịch', 'translate', 'dịch thuật', 'chuyển ngữ']
-            is_translation = any(keyword in question.lower() for keyword in translation_keywords)
-            
-            if similar_docs and not is_translation:
+            if similar_docs:
                 print(f"\nĐã sử dụng {len(similar_docs)} tài liệu liên quan")
-            elif is_translation:
-                print("\nĐã sử dụng chức năng dịch thuật.")
                 
         except Exception as e:
             print(f"\nLỗi: {e}")
             
-
 
 if __name__ == "__main__":
     main()

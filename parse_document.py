@@ -8,7 +8,7 @@ from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
 
-from models import agent_manager, get_embedding
+from _agents import agent_manager, get_embedding
 from _config import ModelType
 from _logger import logging
 
