@@ -1,5 +1,5 @@
 from _utils import build_db
-from llm_call import RAGSystem
+from _rag import RAGSystem
 
 
 def print_help():
