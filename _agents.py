@@ -27,7 +27,7 @@ class AgentManager:
                 api_key=client_config.api_key
             )
 
-    def create_agent(self, name:str, instruction:str, model_type: ModelType, tools: list = []) -> Agent:
+    def create_agent(self, name:str, instruction:str, model_type: ModelType) -> Agent:
         client = self.get_client(model_type)
         model = OpenAIChatCompletionsModel(
             model=self.config[model_type].name,
@@ -37,7 +37,7 @@ class AgentManager:
             name=name,
             instructions=instruction,
             model=model,
-            tools=tools
+            # tools=tools
         )
         return agent
 
@@ -47,7 +47,7 @@ class AgentManager:
             prompt, 
             run_config=RunConfig(
                 tracing_disabled=True,
-                model_settings=ModelSettings(tool_choice="auto")
+                # model_settings=ModelSettings(tool_choice={"type": "function", "function": {"name": "run_translate"}}) # type: ignore
             )
         )
         return result

@@ -51,7 +51,7 @@ class RAGSystem:
             "Rag agent",
             instruction=INSTRUCTION,
             model_type=ModelType.CHAT,
-            tools=self.available_tools_list
+            # tools=self.available_tools_list
         )
         message = [
             {
@@ -63,7 +63,7 @@ class RAGSystem:
         ]
         # FIXME: fix call tool
         response = self.agent_manager.run_agent(agent=agent, prompt=message)
-        return response
+        return response.final_output
     
     def query(self, question, top_k=10):
         query_embedding = self.embedding.encode([question])[0] # type: ignore
