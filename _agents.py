@@ -2,7 +2,7 @@ import asyncio
 
 from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
-from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings
+from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings, RunResult
 
 from _config import load_models_config, ModelType
 from _logger import logging
@@ -41,7 +41,7 @@ class AgentManager:
         )
         return agent
 
-    async def _run_agent(self, agent: Agent, prompt) -> str:
+    async def _run_agent(self, agent: Agent, prompt) -> RunResult:
         result = await Runner.run(
             agent, 
             prompt, 
@@ -50,9 +50,9 @@ class AgentManager:
                 model_settings=ModelSettings(tool_choice="auto")
             )
         )
-        return result.final_output
+        return result
     
-    def run_agent(self, agent: Agent, prompt) -> str:
+    def run_agent(self, agent: Agent, prompt) -> RunResult:
         return asyncio.run(self._run_agent(agent, prompt))
     
     def get_client(self, client_type: ModelType) -> AsyncOpenAI:

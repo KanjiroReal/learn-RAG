@@ -1,7 +1,8 @@
 import asyncio
+from typing import List
 
 from googletrans import Translator
-from agents import function_tool
+from agents import function_tool, FunctionTool
 
 from _logger import logging
 from _config import ToolStatus, Tools, ToolConfig
@@ -18,7 +19,7 @@ class ToolsManager:
             )
         }
 
-    def get_tools(self, status: ToolStatus = ToolStatus.ENABLED):
+    def get_tools(self, status: ToolStatus = ToolStatus.ENABLED) -> List[FunctionTool]:
         """retrieve tools by status"""
         return_tools = []
         for tool in self.tools_cfg:
@@ -27,7 +28,7 @@ class ToolsManager:
                 return_tools.append(tool_cfg.function)
         return return_tools
     
-    def get_tool(self, name: Tools):
+    def get_tool(self, name: Tools) -> FunctionTool:
         """retrive a tool by its name"""
         return self.tools_cfg[name].function
     
@@ -58,6 +59,10 @@ def run_translate(text:str, src_lang:str, tar_lang:str) -> str:
         A string of text that is translated from src_lang to tar_lang.
     """
     return asyncio.run(_translate(text=text, src_lang=src_lang, tar_lang=tar_lang))
+
+# TODO: OCR
+def ocr(image) -> str:
+    return ""
 
 
 tools_manager = ToolsManager()

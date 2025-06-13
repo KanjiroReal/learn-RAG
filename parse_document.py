@@ -69,7 +69,7 @@ class Parser:
         
     def parse(self, dir_path:str):
         """Phân luồng đọc file trong dir"""
-        # TODO:
+        # TODO: đọc tất cả từ dir
         pass
     
     def extract_text_from_docx(self, file_path: str) -> List[str]:
@@ -120,7 +120,7 @@ class Parser:
         return list("") 
 
     def extract_text_from_pdf(self, file_path: str) -> List[str]:
-        #TODO
+        #TODO: pdf
         return list("") 
     
     def semantic_chunk(self, text_list, threshold:float=0.3):
@@ -190,7 +190,7 @@ class Parser:
             ]
             response = self.agent_manager.run_agent(agent=self.image_convert_agent, prompt=message)
             self.logger.info("Đã chuyển đổi 1 bức ảnh thành nội dung tóm tắt.")
-            return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] \n{response} \n[KẾT THÚC MÔ TẢ HÌNH ẢNH]"
+            return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] \n{response.final_output} \n[KẾT THÚC MÔ TẢ HÌNH ẢNH]"
             return return_text
         except Exception as e:
             self.logger.info(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")

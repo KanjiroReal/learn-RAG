@@ -21,7 +21,7 @@ class RAGSystem:
             [doc.payload['text'] for doc in context_docs]
         )
         
-        # TODO: fix prompt
+        # FIXME: fix prompt
         INSTRUCTION = f"""
         You are a helpful assistant specialized in supporting university with thesis and essay. 
         Use the provided reference information to answer the student's question clearly and accurately.
@@ -61,7 +61,7 @@ class RAGSystem:
                 ]
             }
         ]
-        # TODO:  fix call tool
+        # FIXME: fix call tool
         response = self.agent_manager.run_agent(agent=agent, prompt=message)
         return response
     
