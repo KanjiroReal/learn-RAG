@@ -51,7 +51,7 @@ class RAGSystem:
             "Rag agent",
             instruction=INSTRUCTION,
             model_type=ModelType.CHAT,
-            # tools=self.available_tools_list
+            tools=self.available_tools_list
         )
         message = [
             {

@@ -5,6 +5,7 @@ __pycache__/
 *.docx
 *.txt
 *.pdf
+*.xlsx
 .env*
 
 test_*.py

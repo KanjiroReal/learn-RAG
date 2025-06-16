@@ -1,11 +1,13 @@
 import asyncio
+from typing import List
 
 from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
 from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings, RunResult
 
-from _config import load_models_config, ModelType
+from _config import load_models_config, ModelType, ToolStatus
 from _logger import logging
+from _tools import Tool
 
 _embedding = None
 logger = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ class AgentManager:
                 api_key=client_config.api_key
             )
 
-    def create_agent(self, name:str, instruction:str, model_type: ModelType) -> Agent:
+    def create_agent(self, name:str, instruction:str, model_type: ModelType, tools: List[Tool] = []) -> Agent:
         client = self.get_client(model_type)
         model = OpenAIChatCompletionsModel(
             model=self.config[model_type].name,
@@ -37,7 +39,7 @@ class AgentManager:
             name=name,
             instructions=instruction,
             model=model,
-            # tools=tools
+            tools=tools
         )
         return agent
 
@@ -47,7 +49,7 @@ class AgentManager:
             prompt, 
             run_config=RunConfig(
                 tracing_disabled=True,
-                # model_settings=ModelSettings(tool_choice={"type": "function", "function": {"name": "run_translate"}}) # type: ignore
+                model_settings=ModelSettings(tool_choice="auto")
             )
         )
         return result

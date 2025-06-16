@@ -1,8 +1,11 @@
 import asyncio
 from typing import List
+from io import BytesIO
 
+import pytesseract
 from googletrans import Translator
-from agents import function_tool, FunctionTool
+from agents import function_tool, Tool
+from PIL import Image
 
 from _logger import logging
 from _config import ToolStatus, Tools, ToolConfig
@@ -19,7 +22,7 @@ class ToolsManager:
             )
         }
 
-    def get_tools(self, status: ToolStatus = ToolStatus.ENABLED) -> List[FunctionTool]:
+    def get_tools(self, status: ToolStatus = ToolStatus.ENABLED) -> List[Tool]:
         """retrieve tools by status"""
         return_tools = []
         for tool in self.tools_cfg:
@@ -28,7 +31,7 @@ class ToolsManager:
                 return_tools.append(tool_cfg.function)
         return return_tools
     
-    def get_tool(self, name: Tools) -> FunctionTool:
+    def get_tool(self, name: Tools) -> Tool:
         """retrive a tool by its name"""
         return self.tools_cfg[name].function
     
@@ -61,8 +64,11 @@ def run_translate(text:str, src_lang:str, tar_lang:str) -> str:
     return asyncio.run(_translate(text=text, src_lang=src_lang, tar_lang=tar_lang))
 
 # TODO: OCR
-def ocr(image) -> str:
-    return ""
+def ocr_image_bytes(image_bytes: bytes) -> str:
+    image = Image.open(BytesIO(image_bytes))
+    text = pytesseract.image_to_string(image, lang='eng')
+    return text
+    
 
 
 tools_manager = ToolsManager()

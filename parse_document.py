@@ -2,11 +2,13 @@ import base64
 import json
 from typing import List
 
+import pandas as pd
 from docx import Document
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
+
 
 from _agents import agent_manager, get_embedding
 from _config import ModelType
@@ -108,8 +110,11 @@ class Parser:
         return full_text
     
     def extract_text_from_txt(self, file_path: str) -> List[str]:
-        #TODO: txt
-        return list("") 
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = f.read()
+        
+        texts = data.split('\n')
+        return texts
 
     def extract_text_from_html(self, file_path: str) -> List[str]:
         #TODO: html
@@ -117,6 +122,8 @@ class Parser:
     
     def extract_text_from_excel(self, file_path: str) -> List[str]:
         #TODO: excel
+        df = pd.read_excel(file_path)
+        tables = extract_table_island(df)
         return list("") 
 
     def extract_text_from_pdf(self, file_path: str) -> List[str]:
@@ -256,3 +263,21 @@ class Parser:
         return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH JSON FORMAT] \n{converted_table} \n[KẾT THÚC BẢNG]"
     
 
+
+def extract_table_island(df: pd.DataFrame, min_non_nan=2, max_gap=1):
+    """Extract multiple discrete table from an excel file"""
+    tables = []
+    current = []
+    last = -1
+    for i, row in df.iterrows():
+        if row.notna().sum() >= min_non_nan: 
+            if current and (i - last) > max_gap: # type: ignore
+                tables.append(pd.DataFrame(current).reset_index(drop=True))
+                current = []
+            current.append(row)
+            last = i
+        else:
+            continue
+    if current:
+        tables.append(pd.DataFrame(current).reset_index(drop=True))
+    return tables
