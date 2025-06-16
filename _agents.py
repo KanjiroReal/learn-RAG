@@ -6,11 +6,10 @@ from openai import AsyncOpenAI
 from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings, RunResult
 
 from _config import load_models_config, ModelType, ToolStatus
-from _logger import logging
+from _logger import logger
 from _tools import Tool
 
 _embedding = None
-logger = logging.getLogger(__name__)
 class AgentManager:
     """Manager for Agent and client of OpenAI Agent SDK"""
 
@@ -65,7 +64,7 @@ def get_embedding():
     global _embedding
     if _embedding is None:
         _embedding = SentenceTransformer("huyydangg/DEk21_hcmute_embedding")
-    logger.info("Đã load embedding.")
+    logger.success("Đã load embedding.")
     return _embedding
 
 

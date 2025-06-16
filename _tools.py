@@ -7,10 +7,9 @@ from googletrans import Translator
 from agents import function_tool, Tool
 from PIL import Image
 
-from _logger import logging
+from _logger import logger
 from _config import ToolStatus, Tools, ToolConfig
 
-logger = logging.getLogger(__name__)
 
 class ToolsManager:
     def __init__(self) -> None:
@@ -18,7 +17,7 @@ class ToolsManager:
             Tools.TRANSLATE : ToolConfig(
                 name="translate",
                 status=ToolStatus.ENABLED,
-                function=run_translate,
+                function=_translate,
             )
         }
 
@@ -37,31 +36,41 @@ class ToolsManager:
     
 
 # tools
+@function_tool
 async def _translate(text:str, src_lang:str, tar_lang:str) -> str:
+    """Translate text from one to another. accept all language.
+
+    Args:
+        text: The text that need to be translated
+        src_lang: The source language code. (e.g., 'vi' for Vietnamese)
+        tar_lang: The target language code. (e.g., 'en' for English)
+
+    Returns:
+        A string of text that is translated from src_lang to tar_lang.
+    """
     async with Translator() as translator:
         result = await translator.translate(
             text=text,
             src=src_lang,
             dest=tar_lang
         )
-    logger.info("Đã sử dụng tool dịch.")
+    logger.success("Đã sử dụng tool dịch.")
     return result.text
 
 
 # declare
-@function_tool
-def run_translate(text:str, src_lang:str, tar_lang:str) -> str:
-    """Translate text.
+# def run_translate(text:str, src_lang:str, tar_lang:str) -> str:
+#     """Translate text from one to another. accept all language.
 
-    Args:
-        text: Text to translate.translate from src_lang to tar_lang
-        src_lang: Source Language. This is the orignal language of 'text'.
-        tar_lang: Target Language. This is the target language to transte to.
+#     Args:
+#         text: The text that need to be translated
+#         src_lang: The source language code. (e.g., 'vi' for Vietnamese)
+#         tar_lang: The target language code. (e.g., 'en' for English)
 
-    Returns:
-        A string of text that is translated from src_lang to tar_lang.
-    """
-    return asyncio.run(_translate(text=text, src_lang=src_lang, tar_lang=tar_lang))
+#     Returns:
+#         A string of text that is translated from src_lang to tar_lang.
+#     """
+#     return asyncio.run(_translate(text=text, src_lang=src_lang, tar_lang=tar_lang))
 
 # TODO: OCR
 def ocr_image_bytes(image_bytes: bytes) -> str:
@@ -69,6 +78,4 @@ def ocr_image_bytes(image_bytes: bytes) -> str:
     text = pytesseract.image_to_string(image, lang='eng')
     return text
     
-
-
 tools_manager = ToolsManager()

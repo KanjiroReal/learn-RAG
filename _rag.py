@@ -1,13 +1,12 @@
 from vector_db import QdrantManager
 from _agents import agent_manager, get_embedding
-from _tools import run_translate
 from _config import ModelType, ToolStatus
-from _logger import logging
+from _logger import logger
 from _tools import tools_manager
 
 class RAGSystem:
     def __init__(self, collection_query: str) -> None:
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         
         self.agent_manager = agent_manager
         self.llm_model = None
@@ -21,11 +20,14 @@ class RAGSystem:
             [doc.payload['text'] for doc in context_docs]
         )
         
-        # FIXME: fix prompt
+        # FIXME: fix prompt - tool describe
         INSTRUCTION = f"""
         You are a helpful assistant specialized in supporting university with thesis and essay. 
         Use the provided reference information to answer the student's question clearly and accurately.
         You also have access to tool. Use as needed.
+        
+        Tools Describe:
+        - 
         
         Your task will be considered successful only if you adhere to the rules outlined below.
         
@@ -61,7 +63,6 @@ class RAGSystem:
                 ]
             }
         ]
-        # FIXME: fix call tool
         response = self.agent_manager.run_agent(agent=agent, prompt=message)
         return response.final_output
     

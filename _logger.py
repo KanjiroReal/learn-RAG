@@ -1,6 +1,10 @@
-import logging
+import sys
+from loguru import logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(levelname)s][source file: %(name)s.py]: %(message)s.'
+logger.add(
+    sys.stdout,
+    colorize=True,
+    backtrace=True, 
+    diagnose=True,
+    level="INFO"
 )

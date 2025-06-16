@@ -2,17 +2,19 @@ import base64
 import json
 from typing import List
 
-import pandas as pd
+import pandas as pd 
+import numpy as np
+from skimage.measure import label, regionprops
+from openpyxl import load_workbook
 from docx import Document
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
 
-
 from _agents import agent_manager, get_embedding
 from _config import ModelType
-from _logger import logging
+from _logger import logger
 
 class Parser:
     def __init__(self) -> None:
@@ -56,8 +58,6 @@ class Parser:
         - Do not include element positions in this step. Focus on conveying the image's overall composition or scene clearly.
         - IMPORTANT: This step is mandatory. Omitting it will result in complete task failure.
         """
-        
-        self.logger = logging.getLogger(__name__)
 
         self.embedding = get_embedding()
         self.agent_manager = agent_manager
@@ -68,19 +68,20 @@ class Parser:
             model_type=ModelType.VL
         )
         
-        
     def parse(self, dir_path:str):
         """Phân luồng đọc file trong dir"""
         # TODO: đọc tất cả từ dir
         pass
     
-    def extract_text_from_docx(self, file_path: str) -> List[str]:
+    def extract_texts_from_docx(self, file_path: str) -> List[str]:
         """
         Xử lý văn bản đầu vào là docx, call llm summarize khi gặp table, ảnh. trả về list text là các document mỗi khi user ấn <Enter> trong document.
         """
-        self.logger.info("Đang xử lý document...")
+        logger.info("Đang xử lý document...")
         doc = Document(file_path)
-        full_text = []
+        file_header = f"File: {file_path} {'#'* 50}"
+        # header for file
+        full_text = [file_header]
         for element in doc.element.body:
             if element.tag.endswith('p'): # paragraph tag
                 paragraph = Paragraph(element, doc)
@@ -101,38 +102,46 @@ class Parser:
                 table = Table(element, doc)
                 
                 # I think convert the table into formated-text could be better than summary
-                self.logger.info("Đã tìm thấy 1 bảng trong paragraph.")
+                logger.info("Đã tìm thấy 1 bảng trong paragraph.")
                 converted_table = self._convert_table_to_json(table)
                 if converted_table:
                     full_text.append(converted_table)
         
-        self.logger.info(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
+        logger.info(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
         return full_text
     
-    def extract_text_from_txt(self, file_path: str) -> List[str]:
+    def extract_texts_from_excel(self, file_path: str) -> List[str]:
+        """Extract excel file.
+        Pipeline:
+        Read -> normalize (fill merge, fomular) -> extract multiple tables -> convert json
+        """
+        df = load_merged_excel(file_path)
+        tables_list = extract_table_islands(df)
+        # header for f
+        file_header = f"File: {file_path} {'#'* 50}"
+        table_texts = [file_header] + [self._convert_table_to_json(tbl) for tbl in tables_list]
+        return table_texts
+    
+    def extract_texts_from_txt(self, file_path: str) -> List[str]:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = f.read()
-        
-        texts = data.split('\n')
+        file_header = f"File: {file_path} {'#'* 50}"
+        texts = [file_header]
+        texts += data.split('\n')
         return texts
 
-    def extract_text_from_html(self, file_path: str) -> List[str]:
+    def extract_texts_from_html(self, file_path: str) -> List[str]:
         #TODO: html
+        
         return list("") 
     
-    def extract_text_from_excel(self, file_path: str) -> List[str]:
-        #TODO: excel
-        df = pd.read_excel(file_path)
-        tables = extract_table_island(df)
-        return list("") 
-
     def extract_text_from_pdf(self, file_path: str) -> List[str]:
         #TODO: pdf
         return list("") 
     
     def semantic_chunk(self, text_list, threshold:float=0.3):
         """create chunk by semantic method with threshold"""
-        self.logger.info("Đang trích xuất chunk...")
+        logger.info("Đang trích xuất chunk...")
         chunks = []
         current_chunk = [text_list[0]]
         embeddings = self.embedding.encode(text_list)
@@ -149,16 +158,17 @@ class Parser:
         if current_chunk:
             chunks.append(" ".join(current_chunk))
 
-        self.logger.info(f"Đã tạo {len(chunks)} chunks từ document.")
+        logger.info(f"Đã tạo {len(chunks)} chunks từ document.")
         return chunks
     
     def create_embedding(self, texts):
-        self.logger.info("Đang tạo embedding...")
+        logger.info("Đang tạo embedding...")
         embeddings = self.embedding.encode(texts)
-        self.logger.info("Đã tạo embedding.")
+        logger.info("Đã tạo embedding.")
         return embeddings
     
-# protected method ======================================================
+
+# protected methods ======================================================
     def _extract_images_from_paragraph(self, paragraph, doc) -> List[bytes]:
         images = []
         
@@ -170,13 +180,13 @@ class Parser:
                 for blip in blips:
                     embed_id = blip.get(qn('r:embed'))
                     if embed_id:
-                        self.logger.info("Đã tìm thấy 1 ảnh trong paragraph.")
+                        logger.info("Đã tìm thấy 1 ảnh trong paragraph.")
                         try:
                             # get image data
                             image_part = doc.part.related_parts[embed_id]
                             images.append(image_part.blob)
                         except Exception as e:
-                            self.logger.error(f"Lỗi khi trích xuất thông tin ảnh tại private method: _extract_images_from_paragraph: {e}")
+                            logger.error(f"Lỗi khi trích xuất thông tin ảnh tại private method: _extract_images_from_paragraph: {e}")
         
         return images
     
@@ -196,14 +206,15 @@ class Parser:
                 }
             ]
             response = self.agent_manager.run_agent(agent=self.image_convert_agent, prompt=message)
-            self.logger.info("Đã chuyển đổi 1 bức ảnh thành nội dung tóm tắt.")
+            logger.info("Đã chuyển đổi 1 bức ảnh thành nội dung tóm tắt.")
             return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] \n{response.final_output} \n[KẾT THÚC MÔ TẢ HÌNH ẢNH]"
             return return_text
         except Exception as e:
-            self.logger.info(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
+            logger.info(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
             raise e.with_traceback(e.__traceback__)
         
     def _convert_table_to_markdown(self, table: Table) -> str:
+        # TODO: input table and df
         """convert table to markdown. 
         format below
         |      | Col2 | col3 |
@@ -221,11 +232,11 @@ class Parser:
             table_rows.append(" | " + " | ".join(row_cells) + " | ")
         
         converted_table = "\n".join(table_rows) 
-        self.logger.info("Đã chuyển đổi 1 bảng thành markdown format.")
+        logger.info("Đã chuyển đổi 1 bảng thành markdown format.")
         return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH MARKDOWN FORMAT] \n{converted_table} \n[KẾT THÚC BẢNG]"
 
-    def _convert_table_to_json(self, table: Table) -> str:
-        """Convert table to json
+    def _convert_table_to_json(self, table: pd.DataFrame | Table) -> str:
+        """Convert docx.Table or pd.Dataframe table to json
         if the table have the format
         |      | Col2 | col3 |
         | row2 | a    | c    |
@@ -246,38 +257,58 @@ class Parser:
             }
         ]
         """
-        header = []
-        values = []
-        for row_index, row in enumerate(table.rows):
-            if row_index == 0:  # header
-                header = [cell.text for cell in row.cells]
-                values = [[] for _ in header]
-            else:
-                for col_index, cell in enumerate(row.cells):
-                    if col_index < len(values):  # Đảm bảo không vượt quá số cột
-                        values[col_index].append(cell.text)
+        if isinstance(table, pd.DataFrame):
+            table = table.reset_index(drop=True)
+            columns = list(table.columns)
+            values = [table[col].astype(str).tolist() for col in table.columns]
+        elif isinstance(table, Table):
+            header = []
+            values = []
+            for row_index, row in enumerate(table.rows):
+                if row_index == 0:  # header
+                    header = [cell.text for cell in row.cells]
+                    values = [[] for _ in header]
+                else:
+                    for col_index, cell in enumerate(row.cells):
+                        if col_index < len(values):  # Đảm bảo không vượt quá số cột
+                            values[col_index].append(cell.text)
+            columns = header
+        else:
+            raise TypeError(f"Input must be either docx.table.Table or pandas.DataFrame, Got {type(table)}.")
         
-        table_json = [{"key": key, "value": value} for key, value in zip(header, values)]
+        table_json = [{"key": key, "value": value} for key, value in zip(columns, values)]
         converted_table = json.dumps(table_json, indent=2, ensure_ascii=False)
-        self.logger.info("Đã chuyển đổi 1 bảng thành json format.")
+        logger.success("Đã chuyển đổi 1 bảng thành json format.")
         return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH JSON FORMAT] \n{converted_table} \n[KẾT THÚC BẢNG]"
     
 
-
-def extract_table_island(df: pd.DataFrame, min_non_nan=2, max_gap=1):
+# functions ======================================================
+def extract_table_islands(df: pd.DataFrame) -> List[pd.DataFrame]:
     """Extract multiple discrete table from an excel file"""
-    tables = []
-    current = []
-    last = -1
-    for i, row in df.iterrows():
-        if row.notna().sum() >= min_non_nan: 
-            if current and (i - last) > max_gap: # type: ignore
-                tables.append(pd.DataFrame(current).reset_index(drop=True))
-                current = []
-            current.append(row)
-            last = i
-        else:
-            continue
-    if current:
-        tables.append(pd.DataFrame(current).reset_index(drop=True))
-    return tables
+    boolean_matrix = label(np.array(df.notnull().astype("int")))
+    
+    list_dfs = []
+    for s in regionprops(boolean_matrix):
+        sub_df = (df.iloc[s.bbox[0]:s.bbox[2], s.bbox[1]:s.bbox[3]]
+                    .pipe(lambda df_: df_.rename(columns=df_.iloc[0]) # type: ignore
+                    .drop(df_.index[0])))
+        list_dfs.append(sub_df)
+    
+    return list_dfs
+
+def load_merged_excel(filepath, sheet_name=0) -> pd.DataFrame:
+    wb = load_workbook(filepath, data_only=True)
+    ws = wb[sheet_name if isinstance(sheet_name, str) else wb.sheetnames[sheet_name]]
+    
+    # fill merged
+    for merged_cell_range in list(ws.merged_cells.ranges):
+        min_col, min_row, max_col, max_row = merged_cell_range.bounds
+        top_left_value = ws.cell(row=min_row, column=min_col).value
+        ws.unmerge_cells(str(merged_cell_range))
+        for row in range(min_row, max_row + 1):
+            for col in range(min_col, max_col +1):
+                if ws.cell(row=row, column=col).value is None:
+                    ws.cell(row=row, column=col, value=top_left_value)
+    data = ws.values
+    df = pd.DataFrame(data)
+    return df

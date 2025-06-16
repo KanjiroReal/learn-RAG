@@ -1,5 +1,6 @@
 from _utils import build_db
 from _rag import RAGSystem
+from _logger import logger
 
 
 def print_help():
@@ -17,7 +18,7 @@ def print_help():
     print("   - 'quit' : Thoát chương trình")
     print("="*60)
 
-
+# @logger.catch
 def main():
     collection = "KL_TL"
     rag_system = build_db(
@@ -52,12 +53,11 @@ def main():
             print(response)
             
             if similar_docs:
-                print(f"\nĐã sử dụng {len(similar_docs)} tài liệu liên quan")
+                logger.info(f"\nĐã sử dụng {len(similar_docs)} tài liệu liên quan")
                 
         except Exception as e:
             raise e.with_traceback(e.__traceback__)
-            
-            
+
 
 if __name__ == "__main__":
     main()

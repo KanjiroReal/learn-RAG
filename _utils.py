@@ -1,8 +1,8 @@
 from _rag import RAGSystem
-from _logger import logging
+from _logger import logger
 from parse_document import Parser
 
-logger = logging.getLogger(__name__)
+
 
 def build_db(rag_system: RAGSystem, docx_file):
     
@@ -15,7 +15,7 @@ def build_db(rag_system: RAGSystem, docx_file):
         doc_processor = Parser()
         
         # doc
-        paragraphs = doc_processor.extract_text_from_docx(docx_file)
+        paragraphs = doc_processor.extract_texts_from_docx(docx_file)
         chunks = doc_processor.semantic_chunk(paragraphs)
         
         # sparse vector (for hybrid search)
