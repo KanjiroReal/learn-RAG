@@ -23,7 +23,7 @@ def main():
     collection = "KL_TL"
     rag_system = build_db(
         rag_system=RAGSystem(collection_query=collection),
-        docx_file="KLQLDD032024.docx"
+        dir_path="data"
     )
     
     print("\n\nTrợ lý AI hỗ trợ tiểu luận và khoá luận")

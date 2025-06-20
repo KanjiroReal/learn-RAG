@@ -3,7 +3,7 @@ from _logger import logger
 from parse_document import Parser
 
 
-def build_db(rag_system: RAGSystem, docx_file) -> RAGSystem:
+def build_db(rag_system: RAGSystem, dir_path) -> RAGSystem:
     
     qdrant_manager = rag_system.qdrant
     
@@ -14,7 +14,7 @@ def build_db(rag_system: RAGSystem, docx_file) -> RAGSystem:
         doc_processor = Parser()
         
         # doc
-        paragraphs = doc_processor.extract_texts_from_docx(docx_file)
+        paragraphs = doc_processor.extract_texts_from_dir(dir_path)
         chunks = doc_processor.semantic_chunk(paragraphs)
         
         # sparse vector (for hybrid search)
