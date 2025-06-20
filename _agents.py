@@ -1,13 +1,12 @@
 import asyncio
-from typing import List
+from typing import List, Any, Union
 
 from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
-from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings, RunResult
+from agents import Agent, Runner, OpenAIChatCompletionsModel, RunConfig, ModelSettings, RunResult, Handoff
 
-from _config import load_models_config, ModelType, ToolStatus
+from _config import load_models_config, ModelType
 from _logger import logger
-from _tools import Tool
 
 _embedding = None
 class AgentManager:
@@ -28,33 +27,37 @@ class AgentManager:
                 api_key=client_config.api_key
             )
 
-    def create_agent(self, name:str, instruction:str, model_type: ModelType, tools: List[Tool] = []) -> Agent:
+    def create_agent(self, name:str, instruction:str, model_type: ModelType, **kwargs) -> Agent:
         client = self.get_client(model_type)
         model = OpenAIChatCompletionsModel(
             model=self.config[model_type].name,
             openai_client=client
         )
+        
+        tools = kwargs.get("tools", [])
+        handoffs = kwargs.get("handoffs", [])
         agent = Agent(
             name=name,
             instructions=instruction,
             model=model,
-            tools=tools
+            tools=tools,
+            handoffs=handoffs
         )
         return agent
 
-    async def _run_agent(self, agent: Agent, prompt) -> RunResult:
+    async def _run_agent(self, agent: Agent, prompt, model_setting: ModelSettings | None = None) -> RunResult:
         result = await Runner.run(
             agent, 
             prompt, 
             run_config=RunConfig(
                 tracing_disabled=True,
-                model_settings=ModelSettings(tool_choice="auto")
+                model_settings=model_setting,
             )
         )
         return result
     
-    def run_agent(self, agent: Agent, prompt) -> RunResult:
-        return asyncio.run(self._run_agent(agent, prompt))
+    def run_agent(self, agent: Agent, prompt, model_setting: ModelSettings | None = None) -> RunResult:
+        return asyncio.run(self._run_agent(agent, prompt, model_setting))
     
     def get_client(self, client_type: ModelType) -> AsyncOpenAI:
         return self.clients[client_type]

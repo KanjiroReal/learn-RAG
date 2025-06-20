@@ -1,6 +1,9 @@
 import base64
 import json
+import os
 from typing import List
+from io import BytesIO
+from dotenv import load_dotenv
 
 import pandas as pd 
 import numpy as np
@@ -11,64 +14,23 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from sentence_transformers import util
+from unstructured.partition.pdf import partition_pdf
+from unstructured_pytesseract import pytesseract
+from PIL import Image
 
 from _agents import agent_manager, get_embedding
 from _config import ModelType
 from _logger import logger
+from _prompts import PROMPT, prompt_manager
+
+load_dotenv()
+pytesseract.tesseract_cmd = os.getenv("TESSERACT_BACKEND_URL")
 
 class Parser:
     def __init__(self) -> None:
-        CONVERT_IMAGE_PROMPT = """
-        You are an image-to-text conversion tool. Your task is to generate a detailed and accurate description of the visual contents in the given image.
-
-        Your task will be considered successful only if you strictly adhere to the rules and workflow outlined below.
-
-        General Rules:
-        - You must respond in Vietnamese under all circumstances. Using any other language will result in complete task failure.
-        - Do not use any introductory or framing phrases such as: "This is", "The image shows", "Below is", etc.
-        - Use plain text only. Do not use any formatting such as markdown (no *bold*, _underline_, `backticks`, bullet points, or numbered lists).
-        - Use correct punctuation and clear, concise language. Line breaks are allowed to separate sections if needed.
-
-        Execution Workflow:
-        The following steps must be followed sequentially and strictly.
-
-        Step 1: Brief Infomation
-        - In this step, briefly summarize what the image is generally about using the format:
-        "1. Tổng quan: Bức ảnh mô tả..."
-        - IMPORTANT: This step is mandatory. Omitting it will result in complete task failure.
-
-        Step 2: Key Information
-        - Scan the image and describe all prominent visual elements using the format:
-        "2. Thông tin nổi bật:"
-        - Include object names, visual components, and all visible text or numbers.
-        - For any text or numeric content, transcribe exactly as shown, preserving case, spelling, punctuation, and layout position.
-        - IMPORTANT: This step is mandatory. Omitting it will result in complete task failure.
-
-        Step 3: Secondary Information
-        - Describe less prominent visual elements using the format:
-        "3. Thông tin phụ:"
-        - Continue using position-based formatting, but focus on minor details such as decorative icons, background elements, or shadows.
-        - Keep the descriptions brief but clear.
-        - This step is optional for simple images, but completing it is strongly recommended.
-
-        Step 4: Conclusion
-        - Provide a concise summary that integrates the overall context of the image, including the general overview, key, and secondary information.
-        - Use the format:
-        "4. Kết luận:..."
-        - Do not include element positions in this step. Focus on conveying the image's overall composition or scene clearly.
-        - IMPORTANT: This step is mandatory. Omitting it will result in complete task failure.
-        """
-
-        self.embedding = get_embedding()
-        self.agent_manager = agent_manager
+        self.embedding              = get_embedding()
         
-        self.image_convert_agent = agent_manager.create_agent(
-            name="Image to Text converter",
-            instruction=CONVERT_IMAGE_PROMPT,
-            model_type=ModelType.VL
-        )
-        
-    def parse(self, dir_path:str):
+    def parse(self, dir_path: str):
         """Phân luồng đọc file trong dir"""
         # TODO: đọc tất cả từ dir
         pass
@@ -79,7 +41,7 @@ class Parser:
         """
         logger.info("Đang xử lý document...")
         doc = Document(file_path)
-        file_header = f"File: {file_path} {'#'* 50}"
+        file_header = f"File: {file_path} {'#'* 100}"
         # header for file
         full_text = [file_header]
         for element in doc.element.body:
@@ -93,8 +55,12 @@ class Parser:
                         full_text.append(paragraph.text.strip())
                     
                     # process images
-                    for image_data in images:
-                        image_summary = self._summary_image(image_data)
+                    for image in images:
+                        # image type are: bytes
+                        image_ocr_data = extract_image_ocr_data(image)
+                        # bytes -> base64
+                        image_base64 = base64.b64encode(image).decode('utf-8')
+                        image_summary = self._summary_image(image_base64=image_base64, ocr_data=image_ocr_data)
                         if image_summary:
                             full_text.append(image_summary)
             
@@ -118,26 +84,53 @@ class Parser:
         df = load_merged_excel(file_path)
         tables_list = extract_table_islands(df)
         # header for f
-        file_header = f"File: {file_path} {'#'* 50}"
+        file_header = f"File: {file_path} {'#'* 100}"
         table_texts = [file_header] + [self._convert_table_to_json(tbl) for tbl in tables_list]
         return table_texts
     
     def extract_texts_from_txt(self, file_path: str) -> List[str]:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = f.read()
-        file_header = f"File: {file_path} {'#'* 50}"
+        file_header = f"File: {file_path} {'#'* 100}"
         texts = [file_header]
         texts += data.split('\n')
         return texts
-
-    def extract_texts_from_html(self, file_path: str) -> List[str]:
-        #TODO: html
-        
-        return list("") 
     
     def extract_text_from_pdf(self, file_path: str) -> List[str]:
-        #TODO: pdf
-        return list("") 
+        """Extract list of text, table and image summary from pdf file"""
+        languages = ['vie', 'eng']
+        text_list = []
+        logger.info("Đang Xử lý pdf...")
+        elements = partition_pdf(
+            filename=file_path,
+            strategy='hi_res',
+            extract_images_in_pdf=True,
+            extract_image_block_types=["Image", "Table"],
+            extract_image_block_to_payload=True,
+            languages=languages
+        )
+        
+        for element in elements:
+            # text
+            if getattr(element, "category", None) in ["NarrativeText", "Title", "ListItem"]:
+                text_list.append(element.text)
+                logger.success(f"Trích xuất thành công 1 text element.")
+            
+            # table 
+            elif hasattr(element, "metadata"):
+                if "image_base64" in element.metadata.fields:
+                    image_base64 = element.metadata.fields["image_base64"]
+                    logger.success("Trích xuất thành công 1 ảnh hoặc bảng")
+                    # base64 -> bytes
+                    image_bytes = base64.b64decode(image_base64)
+                    image_ocr_data = extract_image_ocr_data(image_bytes)
+                    image_summary = self._summary_image(image_base64, ocr_data=image_ocr_data)
+                    if image_summary:
+                        text_list.append(image_summary)
+            else:
+                logger.warning("Tìm thấy 1 exception element chưa được thêm vào text_lists tại bruteforce elements.")
+        logger.success(f"Đã trích xuất {len(text_list)} pargraph từ file pdf.")
+        return text_list
     
     def semantic_chunk(self, text_list, threshold:float=0.3):
         """create chunk by semantic method with threshold"""
@@ -190,12 +183,25 @@ class Parser:
         
         return images
     
-    def _summary_image(self, image_data: bytes) -> str:
-        """call llm to summarize text"""
+    def _summary_image(self, image_base64: str, wrap_output: bool = True, ocr_data: dict = {}) -> str:
+        """call llm to summarize image_base64 to formatted text"""
         try:
-            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            # instruction prompt
+            ocr_str = json.dumps(ocr_data, ensure_ascii=False)
+            OCR_CONTEXT = prompt_manager.get_prompt(PROMPT.OCR_CONTEXT)
+            OCR_CONTEXT += f"OCR data:\n{ocr_str}\n\n"
+            SUMMARIZER_PROMPT = prompt_manager.get_prompt(PROMPT.PARSER_SUMMARIZER)
+            instruction = OCR_CONTEXT + SUMMARIZER_PROMPT
+            
+            # agent
+            image_summarizer_agent = agent_manager.create_agent(
+            name="Summarizer",
+            instruction=instruction,
+            model_type=ModelType.VL,
+            )
+            
+            # input message
             image_data_url = f"data:image/jpeg;base64,{image_base64}"
-            # call agent
             message = [
                 {
                     "role": "user",
@@ -205,12 +211,19 @@ class Parser:
                     ]
                 }
             ]
-            response = self.agent_manager.run_agent(agent=self.image_convert_agent, prompt=message)
-            logger.info("Đã chuyển đổi 1 bức ảnh thành nội dung tóm tắt.")
-            return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] \n{response.final_output} \n[KẾT THÚC MÔ TẢ HÌNH ẢNH]"
+            # run agent
+            response = agent_manager.run_agent(
+                agent=image_summarizer_agent, 
+                prompt=message,
+            )
+            logger.success("Đã chuyển đổi 1 bức ảnh thành nội dung tóm tắt.")
+            if wrap_output:
+                return_text = f"[Đây là một bức ảnh, bức ảnh đã được thay thế bằng mô tả của AI][MÔ TẢ HÌNH ẢNH] \n{response.final_output} \n[KẾT THÚC MÔ TẢ HÌNH ẢNH]"
+            else:
+                return_text = response.final_output
             return return_text
         except Exception as e:
-            logger.info(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
+            logger.error(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
             raise e.with_traceback(e.__traceback__)
         
     def _convert_table_to_markdown(self, table: Table) -> str:
@@ -281,7 +294,6 @@ class Parser:
         logger.success("Đã chuyển đổi 1 bảng thành json format.")
         return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH JSON FORMAT] \n{converted_table} \n[KẾT THÚC BẢNG]"
     
-
 # functions ======================================================
 def extract_table_islands(df: pd.DataFrame) -> List[pd.DataFrame]:
     """Extract multiple discrete table from an excel file"""
@@ -312,3 +324,51 @@ def load_merged_excel(filepath, sheet_name=0) -> pd.DataFrame:
     data = ws.values
     df = pd.DataFrame(data)
     return df
+
+def extract_image_ocr_data(image_bytes: bytes) -> dict:
+    """
+    Extracts all text content and corresponding bounding box positions from an image provided as a base64-encoded data URL.
+
+    This function performs OCR (Optical Character Recognition) on the input image and returns both:
+    - The full extracted text as a single string.
+    - A list of individual text blocks, each with its corresponding bounding box coordinates.
+
+    Args:
+        image (bytes): image in bytes
+
+    Returns:
+        dict: A dictionary with the following keys:
+            - 'text' (str): The complete extracted text, concatenated from all detected text blocks.
+            - 'text_blocks' (List[dict]): A list of dictionaries, each representing a text block with:
+                - 'text' (str): The recognized text content of the block.
+                - 'left' (int): The x-coordinate of the top-left corner of the bounding box.
+                - 'top' (int): The y-coordinate of the top-left corner of the bounding box.
+                - 'width' (int): The width of the bounding box.
+                - 'height' (int): The height of the bounding box.
+    """
+    image = Image.open(BytesIO(image_bytes))
+    
+    languages = ['vie', 'eng', 'enm']
+    ocr_data = pytesseract.image_to_data(image, lang="+".join(languages), output_type=pytesseract.Output.DICT)
+    blocks = []
+    for i in range(len(ocr_data['text'])):
+        text = ocr_data['text'][i].strip()
+        if text:
+            block = {
+                'text': text,
+                'left': ocr_data['left'][i],
+                'top': ocr_data['top'][i],
+                'width': ocr_data['width'][i],
+                'height': ocr_data['height'][i]
+            }
+            blocks.append(block)
+    
+    full_text = ' '.join([block['text'] for block in blocks])
+    
+    output = {
+        'text': full_text,
+        'text_blocks': blocks
+    }
+    logger.debug(f"OCR output: \n\n{output}")
+    
+    return output

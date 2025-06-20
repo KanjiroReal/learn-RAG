@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Tools(Enum):
+class AvailableTools(Enum):
     TRANSLATE = "translate"
     
 class ToolStatus(Enum):

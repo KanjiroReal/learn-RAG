@@ -1,4 +1,5 @@
-import asyncio
+import re
+import base64
 from typing import List
 from io import BytesIO
 
@@ -8,13 +9,15 @@ from agents import function_tool, Tool
 from PIL import Image
 
 from _logger import logger
-from _config import ToolStatus, Tools, ToolConfig
+from _config import ToolStatus, AvailableTools, ToolConfig
 
 
 class ToolsManager:
     def __init__(self) -> None:
+        
+        # declair tool here
         self.tools_cfg = {
-            Tools.TRANSLATE : ToolConfig(
+            AvailableTools.TRANSLATE : ToolConfig(
                 name="translate",
                 status=ToolStatus.ENABLED,
                 function=_translate,
@@ -22,7 +25,7 @@ class ToolsManager:
         }
 
     def get_tools(self, status: ToolStatus = ToolStatus.ENABLED) -> List[Tool]:
-        """retrieve tools by status"""
+        """retrieve tools by status, default get enabled."""
         return_tools = []
         for tool in self.tools_cfg:
             tool_cfg = self.tools_cfg[tool]
@@ -30,7 +33,7 @@ class ToolsManager:
                 return_tools.append(tool_cfg.function)
         return return_tools
     
-    def get_tool(self, name: Tools) -> Tool:
+    def get_tool(self, name: AvailableTools) -> Tool:
         """retrive a tool by its name"""
         return self.tools_cfg[name].function
     
@@ -58,24 +61,4 @@ async def _translate(text:str, src_lang:str, tar_lang:str) -> str:
     return result.text
 
 
-# declare
-# def run_translate(text:str, src_lang:str, tar_lang:str) -> str:
-#     """Translate text from one to another. accept all language.
-
-#     Args:
-#         text: The text that need to be translated
-#         src_lang: The source language code. (e.g., 'vi' for Vietnamese)
-#         tar_lang: The target language code. (e.g., 'en' for English)
-
-#     Returns:
-#         A string of text that is translated from src_lang to tar_lang.
-#     """
-#     return asyncio.run(_translate(text=text, src_lang=src_lang, tar_lang=tar_lang))
-
-# TODO: OCR
-def ocr_image_bytes(image_bytes: bytes) -> str:
-    image = Image.open(BytesIO(image_bytes))
-    text = pytesseract.image_to_string(image, lang='eng')
-    return text
-    
 tools_manager = ToolsManager()

@@ -2,10 +2,15 @@
 weight/
 notebooks/
 __pycache__/
+prompts/
+
+*.png
 *.docx
 *.txt
 *.pdf
 *.xlsx
-.env*
+*drawio
+
+.env
 
 test_*.py

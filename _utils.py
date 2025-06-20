@@ -3,8 +3,7 @@ from _logger import logger
 from parse_document import Parser
 
 
-
-def build_db(rag_system: RAGSystem, docx_file):
+def build_db(rag_system: RAGSystem, docx_file) -> RAGSystem:
     
     qdrant_manager = rag_system.qdrant
     
