@@ -7,5 +7,5 @@ logger.add(
     colorize=True,
     backtrace=True, 
     diagnose=True,
-    level="DEBUG"
+    level="INFO" # DEBUG FOR DEBUG; SUCCESS FOR SHORTER LOG
 )

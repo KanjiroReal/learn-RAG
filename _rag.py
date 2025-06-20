@@ -18,7 +18,6 @@ class RAGSystem:
             [doc.payload['text'] for doc in context_docs]
         )
         
-        # FIXME: fix prompt - tool describe
         RETRIEVAL_PROMPT = prompt_manager.get_prompt(prompt_name=PROMPT.RAG_RETRIEVAL_ASSISTANT)
         context_prompt_addon = f"""Context (reference material):\n{context}"""
         RETRIEVAL_PROMPT += context_prompt_addon

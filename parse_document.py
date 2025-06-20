@@ -28,18 +28,43 @@ pytesseract.tesseract_cmd = os.getenv("TESSERACT_BACKEND_URL")
 
 class Parser:
     def __init__(self) -> None:
-        self.embedding              = get_embedding()
+        self.embedding = get_embedding()
         
-    def parse(self, dir_path: str):
-        """Phân luồng đọc file trong dir"""
-        # TODO: đọc tất cả từ dir
-        pass
+    def extract_texts_from_dir(self, dir_path: str) -> List[str]:
+        """extract text from all file in a directory, this method skip nested directory
+        Returns:
+            full_extracted_texts: all texts extracted from all file in directory as a list
+        """
+        
+        full_extracted_texts = []
+        for filename in os.listdir(dir_path):
+            filepath = os.path.join(dir_path,  filename)
+            if os.path.isfile(filepath):
+                # docx
+                if filepath.endswith(".docx"):
+                    text_list = self.extract_texts_from_docx(filepath)
+                # pdf
+                elif filepath.endswith(".pdf"):
+                    text_list =self.extract_texts_from_pdf(filepath)
+                # excel
+                elif filepath.endswith(".xlsx"):
+                    text_list = self.extract_texts_from_excel(filepath)
+                # txt
+                elif filepath.endswith(".txt"):
+                    text_list = self.extract_texts_from_txt(filepath)
+                else:
+                    logger.warning(f"Tìm thấy file không được hỗ trợ trong directory: {filepath}")
+                    text_list = []
+                # add to full text
+                full_extracted_texts += text_list
+            
+        return full_extracted_texts
     
     def extract_texts_from_docx(self, file_path: str) -> List[str]:
         """
         Xử lý văn bản đầu vào là docx, call llm summarize khi gặp table, ảnh. trả về list text là các document mỗi khi user ấn <Enter> trong document.
         """
-        logger.info("Đang xử lý document...")
+        logger.info("Đang xử lý 1 file docx...")
         doc = Document(file_path)
         file_header = f"File: {file_path} {'#'* 100}"
         # header for file
@@ -73,7 +98,7 @@ class Parser:
                 if converted_table:
                     full_text.append(converted_table)
         
-        logger.info(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
+        logger.success(f"Đã hoàn thành trích xuất {len(full_text)} paragraphs.")
         return full_text
     
     def extract_texts_from_excel(self, file_path: str) -> List[str]:
@@ -81,25 +106,30 @@ class Parser:
         Pipeline:
         Read -> normalize (fill merge, fomular) -> extract multiple tables -> convert json
         """
+        logger.info("Đang xử lý 1 file excel...")
         df = load_merged_excel(file_path)
         tables_list = extract_table_islands(df)
         # header for f
         file_header = f"File: {file_path} {'#'* 100}"
         table_texts = [file_header] + [self._convert_table_to_json(tbl) for tbl in tables_list]
+        logger.success(f"Đã hoàn thành trích xuất {len(table_texts)} bảng.")
         return table_texts
     
     def extract_texts_from_txt(self, file_path: str) -> List[str]:
+        logger.info("Đang xử lý 1 file txt...")
         with open(file_path, 'r', encoding='utf-8') as f:
             data = f.read()
         file_header = f"File: {file_path} {'#'* 100}"
         texts = [file_header]
         texts += data.split('\n')
+        logger.success(f"Đã hoàn thành trích xuất {len(texts)} paragraphs.")
         return texts
     
-    def extract_text_from_pdf(self, file_path: str) -> List[str]:
+    def extract_texts_from_pdf(self, file_path: str) -> List[str]:
         """Extract list of text, table and image summary from pdf file"""
         languages = ['vie', 'eng']
-        text_list = []
+        file_header = f"File: {file_path} {'#'* 100}"
+        text_list = [file_header]
         logger.info("Đang Xử lý pdf...")
         elements = partition_pdf(
             filename=file_path,
@@ -129,7 +159,7 @@ class Parser:
                         text_list.append(image_summary)
             else:
                 logger.warning("Tìm thấy 1 exception element chưa được thêm vào text_lists tại bruteforce elements.")
-        logger.success(f"Đã trích xuất {len(text_list)} pargraph từ file pdf.")
+        logger.success(f"Đã hoàn thành trích xuất {len(text_list)} pargraphs.")
         return text_list
     
     def semantic_chunk(self, text_list, threshold:float=0.3):
@@ -226,27 +256,52 @@ class Parser:
             logger.error(f"Lỗi khi call llm về hình ảnh tại method _summary_image: {e}")
             raise e.with_traceback(e.__traceback__)
         
-    def _convert_table_to_markdown(self, table: Table) -> str:
-        # TODO: input table and df
-        """convert table to markdown. 
-        format below
-        |      | Col2 | col3 |
-        | row2 | a    | c    |
-        | row3 | b    | d    |    
+    def _convert_table_to_markdown(self, table: pd.DataFrame | Table) -> str:
+        """Convert docx.Table or pandas.DataFrame to markdown string.
+        For DataFrame:
+        | Col1 | Col2 |
+        | ---- | ---- |
+        | val1 | val2 |
+        For docx.Table: first row treated as header.
         """
-        
-        table_rows = []
-        for row in table.rows:
-            row_cells = []
-            for cell in row.cells:
-                cell_text = cell.text.strip().replace('\n', ' ')
-                row_cells.append(cell_text)
-
-            table_rows.append(" | " + " | ".join(row_cells) + " | ")
-        
-        converted_table = "\n".join(table_rows) 
-        logger.info("Đã chuyển đổi 1 bảng thành markdown format.")
-        return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH MARKDOWN FORMAT] \n{converted_table} \n[KẾT THÚC BẢNG]"
+        # Prepare rows as lists of strings
+        rows: list[list[str]] = []
+        if isinstance(table, pd.DataFrame):
+            df = table.reset_index(drop=True)
+            # Header row
+            columns = list(df.columns)
+            rows.append(columns)
+            # Data rows
+            for _, row in df.iterrows():
+                rows.append([str(row[col]) for col in columns])
+        elif isinstance(table, Table):
+            for row_index, row in enumerate(table.rows):
+                cells = [cell.text.strip().replace('\n', ' ') for cell in row.cells]
+                # For header (first row), record
+                rows.append(cells)
+        else:
+            raise TypeError(f"Input must be either pandas.DataFrame or docx.table.Table, got {type(table)}.")
+        # Build markdown
+        markdown_lines = []
+        if rows:
+            # Header
+            header_cells = rows[0]
+            header_line = "| " + " | ".join(header_cells) + " |"
+            # Separator
+            sep_line = "|" + "|".join([" --- " for _ in header_cells]) + "|"
+            markdown_lines.append(header_line)
+            markdown_lines.append(sep_line)
+            # Data rows
+            for data_cells in rows[1:]:
+                if len(data_cells) < len(header_cells):
+                    data_cells += [""] * (len(header_cells) - len(data_cells))
+                
+                data_cells = data_cells[:len(header_cells)]
+                line = "| " + " | ".join(data_cells) + " |"
+                markdown_lines.append(line)
+        converted = "\n".join(markdown_lines)
+        logger.success("Đã chuyển đổi bảng thành markdown format.")
+        return f"[ĐÂY LÀ BẢNG ĐÃ ĐƯỢC CHUYỂN ĐỔI THÀNH MARKDOWN FORMAT] \n{converted} \n[KẾT THÚC BẢNG]"
 
     def _convert_table_to_json(self, table: pd.DataFrame | Table) -> str:
         """Convert docx.Table or pd.Dataframe table to json
@@ -283,7 +338,7 @@ class Parser:
                     values = [[] for _ in header]
                 else:
                     for col_index, cell in enumerate(row.cells):
-                        if col_index < len(values):  # Đảm bảo không vượt quá số cột
+                        if col_index < len(values):
                             values[col_index].append(cell.text)
             columns = header
         else:

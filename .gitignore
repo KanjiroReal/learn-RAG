@@ -3,7 +3,7 @@ weight/
 notebooks/
 __pycache__/
 prompts/
-
+test_data_dir/
 *.png
 *.docx
 *.txt
