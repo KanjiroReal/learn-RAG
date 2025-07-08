@@ -1,5 +1,4 @@
 import asyncio
-from typing import List, Any, Union
 
 from sentence_transformers import SentenceTransformer
 from openai import AsyncOpenAI
@@ -50,7 +49,7 @@ class AgentManager:
             agent, 
             prompt, 
             run_config=RunConfig(
-                tracing_disabled=True,
+                tracing_disabled=False,
                 model_settings=model_setting,
             )
         )

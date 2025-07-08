@@ -4,6 +4,7 @@ notebooks/
 __pycache__/
 prompts/
 test_data_dir/
+data/
 *.png
 *.docx
 *.txt

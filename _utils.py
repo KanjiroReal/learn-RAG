@@ -15,7 +15,7 @@ def build_db(rag_system: RAGSystem, dir_path) -> RAGSystem:
         
         # doc
         paragraphs = doc_processor.extract_texts_from_dir(dir_path)
-        chunks = doc_processor.semantic_chunk(paragraphs)
+        chunks = doc_processor.semantic_chunk(paragraphs, threshold=0.5)
         
         # sparse vector (for hybrid search)
         qdrant_manager.fit_sparse_vectorizer(chunks)

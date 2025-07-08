@@ -19,7 +19,6 @@ class PROMPT(Enum):
     RAG_RETRIEVAL_ASSISTANT = "RAG_RETRIEVAL_ASSISTANT"
     OCR_CONTEXT = "OCR_CONTEXT"
 
-
 class PromptManager:
     def __init__(self) -> None:
         self.prompts = {}

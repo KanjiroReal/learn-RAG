@@ -1,3 +1,4 @@
+import re
 import base64
 import json
 import os
@@ -162,7 +163,7 @@ class Parser:
         logger.success(f"Đã hoàn thành trích xuất {len(text_list)} pargraphs.")
         return text_list
     
-    def semantic_chunk(self, text_list, threshold:float=0.3):
+    def semantic_chunk(self, text_list: List[str], threshold:float=0.3):
         """create chunk by semantic method with threshold"""
         logger.info("Đang trích xuất chunk...")
         chunks = []
@@ -184,12 +185,99 @@ class Parser:
         logger.info(f"Đã tạo {len(chunks)} chunks từ document.")
         return chunks
     
+    def title_chunk(self, text_list: List[str], title_patterns: List[str]=[]):
+        """Create chunks based on title detection, each chunk includes title and its content"""
+        logger.info("Đang trích xuất chunk theo tiêu đề...")
+        
+        # Comprehensive patterns for Vietnamese legal documents
+        default_patterns = [
+            # V1 - General title patterns
+            r'^[A-Z][A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$',  # All caps
+            r'^(?:Chương|Chapter|Phần|Part|Mục|Section)\s+\d+',  # Chapter/Section numbers with Arabic numerals
+            r'^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][^.]*[^.]$',  # Starts with capital, no ending period
+            r'^\d+\.\s*[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]',  # Numbered titles
+            r'^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][^.]*:$',  # Titles ending with colon
+            
+            # V2 - Legal document specific patterns
+            r'^Mục\s+\d+\.\s*[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]',  # Mục 2. ABCXYZ
+            r'^Điều\s+\d+\.\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',  # Điều 9. abcxyz
+            r'^[a-z]\)\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ].*[;.]$',  # a) abcxyz (end with ; or .)
+            r'^Chương\s+[IVX]+\b',  # Chương I, II, III, IV, V, VI, VII, VIII, IX, X, XI, XII, etc.
+            r'^Chương\s+[IVXLCDM]+\b',  # Extended Roman numerals including L, C, D, M
+            
+            # Additional legal patterns
+            r'^Khoản\s+\d+\.\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',  # Khoản 1. xyz
+            r'^Tiết\s+\d+\.\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',  # Tiết 1. xyz
+            r'^Phần\s+[IVX]+\b',  # Phần I, II, III
+            r'^Phần\s+\d+\.\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',  # Phần 1. xyz
+            r'^[0-9]+\)\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ].*[;.]$',  # 1) xyz; or 1) xyz.
+            r'^[A-Z]\)\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ].*[;.]$',  # A) xyz; or A) xyz.
+            r'^-\s*[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ].*[;.]$',  # - xyz; or - xyz.
+        ]
+        
+        title_patterns += default_patterns
+        
+        chunks = []
+        current_chunk = []
+        current_title = None
+        
+        for i, text in enumerate(text_list):
+            text = text.strip()
+            
+            is_title = False
+            # Check if current text matches any title pattern
+            for pattern in title_patterns:
+                if re.match(pattern, text, re.IGNORECASE):
+                    is_title = True
+                    break
+            
+            # Additional heuristics for title detection
+            if not is_title:
+                # Check if text is significantly shorter than average and starts with capital
+                avg_length = sum(len(t) for t in text_list if t.strip()) / len([t for t in text_list if t.strip()])
+                if (len(text) < avg_length * 0.7 and 
+                    text and 
+                    text[0].isupper() and
+                    not text.endswith('.') and
+                    not text.endswith(';') and
+                    len(text.split()) <= 10):  # Likely a title if short
+                    is_title = True
+            
+            if is_title:
+                # Save previous chunk if exists
+                if current_chunk:
+                    if current_title:
+                        chunk_text = current_title + " " + " ".join(current_chunk)
+                    else:
+                        chunk_text = " ".join(current_chunk)
+                    chunks.append(chunk_text.strip())
+                
+                # Start new chunk with title
+                current_title = text
+                current_chunk = []
+            else:
+                # Add content to current chunk
+                current_chunk.append(text)
+        
+        # Add the last chunk
+        if current_chunk or current_title:
+            if current_title:
+                chunk_text = current_title + " " + " ".join(current_chunk)
+            else:
+                chunk_text = " ".join(current_chunk)
+            chunks.append(chunk_text.strip())
+        
+        # Filter out empty chunks
+        chunks = [chunk for chunk in chunks if chunk.strip()]
+        
+        logger.info(f"Đã tạo {len(chunks)} chunks.")
+        return chunks
+    
     def create_embedding(self, texts):
         logger.info("Đang tạo embedding...")
         embeddings = self.embedding.encode(texts)
         logger.info("Đã tạo embedding.")
         return embeddings
-    
 
 # protected methods ======================================================
     def _extract_images_from_paragraph(self, paragraph, doc) -> List[bytes]:

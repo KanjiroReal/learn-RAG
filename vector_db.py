@@ -1,7 +1,6 @@
 import os
 import uuid
 import joblib
-from abc import ABC, abstractmethod
 from typing import List
 
 from numpy import ndarray
@@ -10,12 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from _logger import logger
 
-class VectorDB(ABC):
-    @abstractmethod
-    def hybrid_search_vector_fulltext(self, query_embedding, query_text:str, limit: int = 5, collection_name: str | None = None) -> List[models.ScoredPoint]:
-        pass
-    
-class QdrantManager(VectorDB):
+class QdrantManager:
     def __init__(self, collection_name ,host='localhost', port=6333) -> None:
         self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
@@ -74,8 +68,7 @@ class QdrantManager(VectorDB):
         
         logger.success(f'Đã thêm {len(points)} points vào collection {target_collection}.')
     
-    
-    def hybrid_search_vector_fulltext(self, query_embedding: ndarray, query_text:str, limit: int = 5, collection_name: str | None = None) -> List[models.ScoredPoint]:
+    def hybrid_search_vector_fulltext(self, query_embedding: ndarray, query_text:str, limit: int = 5, score_thresh_hold: float = 0 ,collection_name: str | None = None) -> List[models.ScoredPoint]:
         target_collection = collection_name if collection_name is not None else self.collection_name
         query_sparse = self.vectorizer.transform([query_text])
         
@@ -98,8 +91,12 @@ class QdrantManager(VectorDB):
             ],
             query=models.FusionQuery(fusion=models.Fusion.RRF)
         )
+        return_poins = []
+        for p in results.points:
+            if p.score > score_thresh_hold:
+                return_poins.append(p)
         
-        return results.points
+        return return_poins
     
     
     def fit_sparse_vectorizer(self, texts: List[str]):

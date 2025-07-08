@@ -1,12 +1,7 @@
-import re
-import base64
 from typing import List
-from io import BytesIO
-
-import pytesseract
+from langfuse import observe
 from googletrans import Translator
 from agents import function_tool, Tool
-from PIL import Image
 
 from _logger import logger
 from _config import ToolStatus, AvailableTools, ToolConfig
@@ -51,6 +46,7 @@ async def _translate(text:str, src_lang:str, tar_lang:str) -> str:
     Returns:
         A string of text that is translated from src_lang to tar_lang.
     """
+    
     async with Translator() as translator:
         result = await translator.translate(
             text=text,
@@ -59,6 +55,5 @@ async def _translate(text:str, src_lang:str, tar_lang:str) -> str:
         )
     logger.success("Đã sử dụng tool dịch.")
     return result.text
-
 
 tools_manager = ToolsManager()

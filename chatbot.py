@@ -1,34 +1,28 @@
+import asyncio
+from _config import load_trace_settings
 from _utils import build_db
 from _rag import RAGSystem
-from _logger import logger
 
-
-def print_help():
-    """Print help information for users"""
-    print("\n" + "="*60)
-    print("HƯỚNG DẪN SỬ DỤNG:")
-    print("="*60)
-    print("1. Hỏi về bài luận và khoá luận: Nhập câu hỏi bình thường")
-    print("2. Dịch thuật:")
-    print("   - 'Dịch sang tiếng Anh: [văn bản]'")
-    print("   - 'Translate to Vietnamese: [text]'")
-    print("   - 'Dịch từ tiếng Anh sang tiếng Việt: [text]'")
-    print("3. Các lệnh đặc biệt:")
-    print("   - 'help' hoặc 'giup' : Hiển thị hướng dẫn")
-    print("   - 'quit' : Thoát chương trình")
-    print("="*60)
-
-# @logger.catch
-def main():
-    collection = "KL_TL"
-    rag_system = build_db(
-        rag_system=RAGSystem(collection_query=collection),
-        dir_path="data"
-    )
+class ChatBot:
+    def __init__(self, collection: str):
+        self.collection = collection
+        self.rag_system = build_db(
+            rag_system=RAGSystem(collection_query=collection),
+            dir_path="data"
+        )
     
-    print("\n\nTrợ lý AI hỗ trợ tiểu luận và khoá luận")
-    print("Nhập 'help' để xem hướng dẫn sử dụng")
-    print("-" * 50)
+    def process_question(self, question: str):        
+        response, similar_docs = self.rag_system.query(question)
+        return response, similar_docs
+
+async def main():
+    load_trace_settings()
+    
+    # Initialize chatbot
+    chatbot = ChatBot(collection="Law")
+    
+    print("\n\n\n\nTrợ lý AI hỗ trợ tìm hiểu luật pháp")
+    print("-" * 100)
     
     while True:
         question = input("\nNhập câu hỏi (hoặc 'quit' để thoát): ").strip()
@@ -38,26 +32,12 @@ def main():
             
         if question.lower() in ["quit", "thoat", "exit"]:
             break
-            
-        if question.lower() in ["help", "giup", "huong dan"]:
-            print_help()
-            continue
         
         print("Đang xử lý...")
-        
-        try:
-            response, similar_docs = rag_system.query(question)
-            
-            print(f"\nTrả lời:")
-            print("-" * 40)
-            print(response)
-            
-            if similar_docs:
-                logger.info(f"\nĐã sử dụng {len(similar_docs)} tài liệu liên quan")
-                
-        except Exception as e:
-            raise e.with_traceback(e.__traceback__)
-
+        response, similar_docs = chatbot.process_question(question)
+        print(f"\nTrả lời:")
+        print("-" * 100)
+        print(response)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
